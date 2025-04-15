@@ -1,18 +1,19 @@
 #include <Arduino.h>
 // Define pin numbers
-const int buttonPin = 2;        // Push button pin
-const int motionSensorPin = 3;  // Motion sensor pin
-const int usTriggerPin = 4;     // Ultrasonic Trigger pin
-const int usEchoPin = 5;        // Ultrasonic Echo pin
-const int ssDo = 6;             // Sound sensor DO pin
-const int ledPin1 = 7;          // LED controlled by push button
-const int ledPin2 = 8;          // LED controlled by sound sensor
-const int ledPin3 = 9;		      // LED controlled by timer interrupt 
+const int buttonPin = 2;              // Push button pin
+const int motionSensorPin = 3;        // Motion sensor pin
+const int usTriggerPin = 4;           // Ultrasonic Trigger pin
+const int usEchoPin = 5;              // Ultrasonic Echo pin
+const int ssDO = 6;                   // Sound sensor DO pin
+const int ledPin1 = 7;                // LED controlled by push button
+const int ledPin2 = 8;                // LED controlled by sound sensor
+const int ledPin3 = 9;		            // LED controlled by timer interrupt 
 
 // Variables to keep track of things
 volatile bool ledState1 = false; // State of LED controlled by push button
 volatile bool ledState2 = false; // State of LED controlled by sound sensor
 volatile bool ledState3 = false; // State of LED controlled by timer interrupt
+volatile bool soundDetected = false; // Flag to indicate sound detection
 volatile uint8_t timerCounter = 0; //count
 const uint8_t timerThreshold = 10; // 10 seconds
 const int DISTANCE_THRESHOLD = 20; // centimeters
@@ -72,12 +73,30 @@ void toggleLed1() {
 
 void toggleLed2() {
     ledState2 = !ledState2; // Toggle LED state
+    delay(100);
     digitalWrite(ledPin2, ledState2); // Update LED state
     if(ledState2){
       Serial.println("Motion detected: LED 2 is ON");
     } else {
       Serial.println("Motion detected: LED 2 is OFF");
     }
+}
+
+void toggleLed3() {
+    delay(100);
+    ledState3 = !ledState3; // Toggle LED state
+    digitalWrite(ledPin3, ledState3); // Update LED state
+    if(ledState3){
+      Serial.println("Sound detected: LED 3 is ON");
+    } else {
+      Serial.println("Sound detected: LED 3 is OFF");
+    }
+}
+void motionHandler() {
+  Serial.println("Motion Detected!!!");
+}
+void soundSensorISR() {
+    soundDetected = true; // Set the flag when sound is detected
 }
 // Timer Interrupt Service Routine
 void TC_HANDLER() {
@@ -100,11 +119,11 @@ void TC_HANDLER() {
       timerCounter = 0;
       
       // Optional: Print to serial for debugging
-      if (ledState3) {
-        Serial.println("LED ON");
-      } else {
-        Serial.println("LED OFF");
-      }
+      // if (ledState3) {
+      //   Serial.println("LED ON");
+      // } else {
+      //   Serial.println("LED OFF");
+      // }
     }
   }
 }
@@ -117,6 +136,7 @@ void setup() {
     pinMode(motionSensorPin, INPUT_PULLDOWN);  // Motion sensor input
     pinMode(usTriggerPin, OUTPUT); // Sets the trigPin as an OUTPUT
     pinMode(usEchoPin, INPUT); // Sets the echoPin as an INPUT
+    pinMode(ssDO, INPUT); // Sets the sound sensor DO pin as input
     pinMode(ledPin1, OUTPUT); // LED 1 output
     pinMode(ledPin2, OUTPUT); // LED 2 output
     pinMode(ledPin3, OUTPUT); // LED 3 output
@@ -125,31 +145,17 @@ void setup() {
     setupTimer();
 
     // Attach interrupts
-    attachInterrupt(digitalPinToInterrupt(motionSensorPin), toggleLed2, RISING); // Trigger on motion detected  
+    attachInterrupt(digitalPinToInterrupt(motionSensorPin), motionHandler, RISING); // Trigger on motion detected 
     attachInterrupt(digitalPinToInterrupt(buttonPin), toggleLed1, FALLING); // Trigger on button press
+    attachInterrupt(digitalPinToInterrupt(ssDO), soundSensorISR, RISING);
     Serial.println("4.3D project start!!!!");
 }
 
 void loop() {
-// generate 10-microsecond pulse to TRIG pin
-  digitalWrite(usTriggerPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(usTriggerPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(usTriggerPin, LOW);
-
-  // measure duration of pulse from ECHO pin
-  duration = pulseIn(usEchoPin, HIGH);
-  // calculate the distance
-  distance = 0.017 * duration;
-
-  if(distance < DISTANCE_THRESHOLD){
-    digitalWrite(ledPin2, HIGH); // turn on LED 2
-    Serial.println("Object within range - LED 2 is ON");
-  }
-  if(distance >= DISTANCE_THRESHOLD){
-    digitalWrite(ledPin2, LOW); // turn off LED 2
-    Serial.println("Object out of range - LED 2 is OFF");
-  }
+  // Check if sound was detected
+    if (soundDetected) {
+        Serial.println("Sound detected!");
+        soundDetected = false; // Reset the flag
+    }
   delay(200); // Small delay to prevent the loop from running too fast
 }
