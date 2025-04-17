@@ -55,6 +55,7 @@ void setupTimer() {
 
 // Interrupt Service Routines (ISRs)
 void toggleLed1() {
+  delay(100);
     ledState1 = !ledState1; // Toggle LED state
     digitalWrite(ledPin1, ledState1); // Update LED state
     if(ledState1){
@@ -66,20 +67,14 @@ void toggleLed1() {
 }
 
 void toggleLed3() {
-  unsigned long currentTime = millis();
-    if (currentTime - lastInterruptTime > debounceDelay) {
-        lastInterruptTime = currentTime; // Update the last interrupt time
-        
-        // Handle the action immediately
-        ledState3 = !ledState3; // Toggle LED state
+  delay(100);
+    ledState3 = !ledState3; // Toggle LED state
     digitalWrite(ledPin3, ledState3); // Update LED state
     if(ledState3){
       Serial.println("Sound detected: LED 3 is ON");
     } else {
       Serial.println("Sound detected: LED 3 is OFF");
     }
-    }
-    
 }
 void motionHandler() {
   delay(100);
